@@ -1,0 +1,171 @@
+﻿
+@using KanbanBoard.Models
+@model Board
+
+@{
+    ViewData["Title"] = Model.Name;
+
+    // Uppgifterna har hämtats från SQLite i BoardsController.
+    var tasks = ViewBag.Tasks as List<KanbanTask> ?? new List<KanbanTask>();
+
+    // De fyra fasta kolumnerna på vår Kanban-tavla.
+    var columns = new[]
+    {
+        new { Status = KanbanBoard.Models.TaskStatus.Backlog, Name = "Backlogg" },
+        new { Status = KanbanBoard.Models.TaskStatus.Todo, Name = "Att göra" },
+        new { Status = KanbanBoard.Models.TaskStatus.InProgress, Name = "Pågår" },
+        new { Status = KanbanBoard.Models.TaskStatus.Done, Name = "Klart" }
+    };
+}
+
+<div class="kanban-container">
+
+    <div class="mb-4">
+        <a asp-controller="Boards"
+           asp-action="Index"
+           class="text-decoration-none text-secondary">
+            ← Tillbaka till mina tavlor
+        </a>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">@Model.Name</h1>
+
+            @if (!string.IsNullOrWhiteSpace(Model.Description))
+            {
+                <p class="page-description">@Model.Description</p>
+            }
+        </div>
+
+        <a asp-controller="KanbanTasks"
+           asp-action="Create"
+           asp-route-boardId="@Model.Id"
+           class="btn btn-kanban-primary">
+            + Ny uppgift
+        </a>
+    </div>
+
+    @* Tavlans fyra kolumner visas bredvid varandra på stora skärmar. *@
+    <div class="row g-3">
+
+        @foreach (var column in columns)
+        {
+            // Filtrerar fram uppgifterna som tillhör den aktuella kolumnen.
+            var columnTasks = tasks
+                .Where(task => task.Status == column.Status)
+                .ToList();
+
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="kanban-card h-100">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="kanban-card-title mb-0">
+                            @column.Name
+                        </h3>
+
+                        <span class="badge bg-secondary">
+                            @columnTasks.Count
+                        </span>
+                    </div>
+
+                    @if (!columnTasks.Any())
+                    {
+                        <p class="kanban-card-description">
+                            Inga uppgifter ännu.
+                        </p>
+                    }
+                    else
+                    {
+                        @* Varje uppgift visas i kolumnen som motsvarar dess status. *@
+                        @foreach (var task in columnTasks)
+                        {
+                            <div class="kanban-card mb-3">
+
+                                <h5 class="kanban-card-title">
+                                    @task.Title
+                                </h5>
+
+                                @if (!string.IsNullOrWhiteSpace(task.Description))
+                                {
+                                    <p class="kanban-card-description">
+                                        @task.Description
+                                    </p>
+                                }
+
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-secondary">
+                                        Prioritet: @task.Priority
+                                    </small>
+
+                                    @if (task.DueDate.HasValue)
+                                    {
+                                        <small class="text-secondary">
+                                            @task.DueDate.Value.ToString("yyyy-MM-dd")
+                                        </small>
+                                    }
+                                </div>
+
+                                @* Flyttknapparna skickar uppgiftens ID och nya status
+                                   till Move-metoden i KanbanTasksController.
+                                   Formulären använder automatiskt CSRF-skydd. *@
+                                <div class="d-flex justify-content-between gap-2 mt-3">
+
+                                    @if (task.Status != KanbanBoard.Models.TaskStatus.Backlog)
+                                    {
+                                        <form asp-controller="KanbanTasks"
+                                              asp-action="Move"
+                                              method="post">
+
+                                            <input type="hidden"
+                                                   name="id"
+                                                   value="@task.Id" />
+
+                                            <input type="hidden"
+                                                   name="status"
+                                                   value="@((int)task.Status - 1)" />
+
+                                            <button type="submit"
+                                                    class="btn btn-kanban-secondary btn-sm">
+                                                ← Flytta
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span></span>
+                                    }
+
+                                    @if (task.Status != KanbanBoard.Models.TaskStatus.Done)
+                                    {
+                                        <form asp-controller="KanbanTasks"
+                                              asp-action="Move"
+                                              method="post">
+
+                                            <input type="hidden"
+                                                   name="id"
+                                                   value="@task.Id" />
+
+                                            <input type="hidden"
+                                                   name="status"
+                                                   value="@((int)task.Status + 1)" />
+
+                                            <button type="submit"
+                                                    class="btn btn-kanban-secondary btn-sm">
+                                                Flytta →
+                                            </button>
+                                        </form>
+                                    }
+
+                                </div>
+
+                            </div>
+                        }
+                    }
+
+                </div>
+            </div>
+        }
+
+    </div>
+</div>

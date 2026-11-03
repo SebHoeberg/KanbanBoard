@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<html lang="sv" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>@ViewData["Title"] - KanbanBoard</title>
+
+    <script type="importmap"></script>
+
+    <!-- Bootstrap används för layout och responsiva komponenter. -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <!-- Här lägger vi senare vår egen dark mode-design. -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/KanbanBoard.styles.css" asp-append-version="true" />
+</head>
+
+<body class="kanban-app">
+
+<!-- Gemensam navigering för alla sidor i applikationen. -->
+<header class="kanban-header">
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+
+            <!-- Logotypen leder tillbaka till startsidan. -->
+            <a class="navbar-brand fw-bold"
+               asp-controller="Home"
+               asp-action="Index">
+                <span class="brand-icon">▦</span>
+                KanbanBoard
+            </a>
+
+            <!-- Här kan vi senare lägga till fler navigeringsalternativ. -->
+            <div class="ms-auto">
+                <span class="navbar-text small">
+                    Min personliga arbetsyta
+                </span>
+            </div>
+
+        </div>
+    </nav>
+</header>
+
+<!-- RenderBody visar innehållet från den aktuella MVC-vyn. -->
+<div class="kanban-content">
+    <main role="main">
+        @RenderBody()
+    </main>
+</div>
+
+<!-- JavaScript som används av webbapplikationen. -->
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+
+@await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>

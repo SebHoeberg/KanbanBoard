@@ -1,0 +1,239 @@
+
+/* =========================================
+   KANBANBOARD - GEMENSAM DESIGN
+   ========================================= */
+
+/*
+ * Färgvariabler för applikationens dark mode.
+ * Genom att samla färgerna här blir det enkelt
+ * att ändra designen utan att leta i hela filen.
+ */
+:root {
+  --kb-background: #171b24;
+  --kb-header: #1e2430;
+  --kb-surface: #242c39;
+  --kb-card: #303a4a;
+  --kb-border: #394456;
+
+  --kb-text: #f1f4f9;
+  --kb-text-muted: #a4afc0;
+
+  --kb-primary: #648de5;
+  --kb-primary-hover: #83a6f2;
+
+  --kb-success: #78c6a3;
+  --kb-warning: #e6b66e;
+  --kb-danger: #e58188;
+}
+
+/* =========================================
+   GRUNDLÄGGANDE SIDLAYOUT
+   ========================================= */
+
+html {
+  font-size: 16px;
+  min-height: 100%;
+}
+
+body.kanban-app {
+  min-height: 100vh;
+  margin: 0;
+
+  background-color: var(--kb-background);
+  color: var(--kb-text);
+
+  font-family: system-ui, -apple-system,
+  "Segoe UI", Roboto, sans-serif;
+}
+
+/* Gör att länkar följer vårt färgtema. */
+a {
+  color: var(--kb-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--kb-primary-hover);
+}
+
+/* =========================================
+   TOPPMENY
+   ========================================= */
+
+.kanban-header {
+  background-color: var(--kb-header);
+  border-bottom: 1px solid var(--kb-border);
+}
+
+.kanban-header .navbar {
+  min-height: 68px;
+  padding: 0.75rem 1.5rem;
+}
+
+.kanban-header .navbar-brand {
+  color: var(--kb-text);
+  font-size: 1.25rem;
+  letter-spacing: -0.4px;
+}
+
+.kanban-header .navbar-brand:hover {
+  color: var(--kb-primary-hover);
+}
+
+.brand-icon {
+  color: var(--kb-primary);
+  margin-right: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.kanban-header .navbar-text {
+  color: var(--kb-text-muted);
+}
+
+/* =========================================
+   HUVUDINNEHÅLL
+   ========================================= */
+
+.kanban-content {
+  width: 100%;
+  min-height: calc(100vh - 69px);
+  padding: 2rem;
+}
+
+/*
+ * Begränsar bredden på vanliga innehållssidor.
+ * Själva Kanban-tavlan kan senare använda
+ * hela skärmens bredd.
+ */
+.kanban-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-title {
+  color: var(--kb-text);
+  font-size: 1.8rem;
+  font-weight: 650;
+  margin-bottom: 0.5rem;
+}
+
+.page-description {
+  color: var(--kb-text-muted);
+  margin-bottom: 2rem;
+}
+
+/* =========================================
+   KORT OCH PANELER
+   ========================================= */
+
+.kanban-card {
+  background-color: var(--kb-surface);
+  border: 1px solid var(--kb-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+
+  transition: border-color 0.2s ease,
+  transform 0.2s ease;
+}
+
+.kanban-card:hover {
+  border-color: var(--kb-primary);
+  transform: translateY(-2px);
+}
+
+.kanban-card-title {
+  color: var(--kb-text);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.kanban-card-description {
+  color: var(--kb-text-muted);
+  font-size: 0.9rem;
+}
+
+/* =========================================
+   KNAPPAR
+   ========================================= */
+
+.btn-kanban-primary {
+  background-color: var(--kb-primary);
+  border: 1px solid var(--kb-primary);
+  color: #fff;
+
+  border-radius: 8px;
+  padding: 0.6rem 1.1rem;
+  font-weight: 500;
+}
+
+.btn-kanban-primary:hover {
+  background-color: var(--kb-primary-hover);
+  border-color: var(--kb-primary-hover);
+  color: #111827;
+}
+
+.btn-kanban-secondary {
+  background-color: var(--kb-surface);
+  border: 1px solid var(--kb-border);
+  color: var(--kb-text);
+
+  border-radius: 8px;
+  padding: 0.6rem 1.1rem;
+}
+
+.btn-kanban-secondary:hover {
+  background-color: var(--kb-card);
+  color: var(--kb-text);
+}
+
+/* =========================================
+   FORMULÄR
+   ========================================= */
+
+.kanban-input {
+  background-color: var(--kb-surface);
+  border: 1px solid var(--kb-border);
+  border-radius: 8px;
+  color: var(--kb-text);
+  padding: 0.65rem 0.9rem;
+}
+
+.kanban-input:focus {
+  background-color: var(--kb-surface);
+  border-color: var(--kb-primary);
+  color: var(--kb-text);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(100, 141, 229, 0.15);
+}
+
+.kanban-input::placeholder {
+  color: var(--kb-text-muted);
+}
+
+/* Tydlig tangentbordsfokus för tillgänglighet. */
+:focus-visible {
+  outline: 2px solid var(--kb-primary);
+  outline-offset: 2px;
+}
+
+/* =========================================
+   RESPONSIV DESIGN
+   ========================================= */
+
+@media (max-width: 768px) {
+  .kanban-content {
+    padding: 1rem;
+  }
+
+  .kanban-header .navbar {
+    padding: 0.75rem 1rem;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .kanban-header .navbar-text {
+    display: none;
+  }
+}

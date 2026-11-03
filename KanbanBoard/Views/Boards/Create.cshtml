@@ -1,0 +1,80 @@
+﻿
+@model KanbanBoard.Models.Board
+
+@{
+    ViewData["Title"] = "Ny tavla";
+}
+
+<div class="kanban-container">
+
+    <div class="mb-4">
+        <h1 class="page-title">Skapa ny tavla</h1>
+        <p class="page-description">
+            Ge din tavla ett namn och en beskrivning för att komma igång.
+        </p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-7 col-xl-6">
+
+            <div class="kanban-card">
+
+                @* Formuläret skickas till BoardsController.Create med POST. *@
+                <form asp-controller="Boards" asp-action="Create" method="post">
+
+                    @* Visar eventuella valideringsfel från modellen. *@
+                    <div asp-validation-summary="ModelOnly"
+                         class="text-danger mb-3"></div>
+
+                    <div class="mb-4">
+                        <label asp-for="Name" class="form-label">
+                            Tavlans namn
+                        </label>
+
+                        <input asp-for="Name"
+                               class="form-control kanban-input"
+                               placeholder="Exempel: Studier"
+                               maxlength="100" />
+
+                        <span asp-validation-for="Name"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Description" class="form-label">
+                            Beskrivning (valfritt)
+                        </label>
+
+                        <textarea asp-for="Description"
+                                  class="form-control kanban-input"
+                                  rows="4"
+                                  maxlength="500"
+                                  placeholder="Vad ska tavlan användas till?"></textarea>
+
+                        <span asp-validation-for="Description"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-kanban-primary">
+                            Skapa tavla
+                        </button>
+
+                        <a asp-controller="Boards"
+                           asp-action="Index"
+                           class="btn btn-kanban-secondary">
+                            Avbryt
+                        </a>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

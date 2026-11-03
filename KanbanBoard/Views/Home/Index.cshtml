@@ -1,0 +1,58 @@
+﻿@{
+    // Sidans titel används av vår gemensamma layout.
+    ViewData["Title"] = "Mina tavlor";
+}
+
+<div class="kanban-container">
+
+    <!-- Sidhuvud med titel och knapp för nya tavlor. -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">Mina tavlor</h1>
+            <p class="page-description mb-0">
+                Organisera dina projekt och håll koll på dina uppgifter.
+            </p>
+        </div>
+
+        <!-- Knappen kopplas till riktig funktionalitet senare. -->
+        <button type="button" class="btn btn-kanban-primary" disabled
+                title="Funktionen kommer i nästa steg">
+            + Ny tavla
+        </button>
+    </div>
+
+    <!-- Tillfälliga exempel för att testa utseendet. -->
+    <div class="row g-4">
+
+        <div class="col-md-6 col-lg-4">
+            <div class="kanban-card h-100">
+                <h2 class="kanban-card-title">Studier</h2>
+                <p class="kanban-card-description">
+                    Kurser, inlämningar och uppgifter.
+                </p>
+                <span class="text-secondary small">Exempeltavla</span>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="kanban-card h-100">
+                <h2 class="kanban-card-title">Personligt</h2>
+                <p class="kanban-card-description">
+                    Vardagsplanering och saker att komma ihåg.
+                </p>
+                <span class="text-secondary small">Exempeltavla</span>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="kanban-card h-100">
+                <h2 class="kanban-card-title">Mina projekt</h2>
+                <p class="kanban-card-description">
+                    Idéer och projekt som jag arbetar med.
+                </p>
+                <span class="text-secondary small">Exempeltavla</span>
+            </div>
+        </div>
+
+    </div>
+</div>

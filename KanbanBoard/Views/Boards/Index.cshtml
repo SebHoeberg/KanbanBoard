@@ -1,0 +1,68 @@
+﻿
+@model IEnumerable<KanbanBoard.Models.Board>
+
+@{
+    ViewData["Title"] = "Mina tavlor";
+}
+
+<div class="kanban-container">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title">Mina tavlor</h1>
+            <p class="page-description">
+                Här hittar du dina Kanban-tavlor och kan organisera dina projekt.
+            </p>
+        </div>
+
+        <a asp-controller="Boards"
+           asp-action="Create"
+           class="btn btn-kanban-primary">
+            + Ny tavla
+        </a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        @* Visas när det inte finns några tavlor i databasen. *@
+        <div class="kanban-card text-center p-5">
+            <h3 class="kanban-card-title">Inga tavlor ännu</h3>
+            <p class="kanban-card-description">
+                Du har inte skapat någon Kanban-tavla ännu.
+                Klicka på Ny tavla för att komma igång.
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+
+            @* Går igenom alla tavlor som hämtats från SQLite. *@
+            @foreach (var board in Model)
+            {
+                <div class="col-md-6 col-lg-4">
+
+                    @* Hela kortet är klickbart och öppnar rätt tavla via dess ID. *@
+                    <a asp-controller="Boards"
+                       asp-action="Details"
+                       asp-route-id="@board.Id"
+                       class="kanban-card h-100 d-block text-decoration-none">
+
+                        <h3 class="kanban-card-title">@board.Name</h3>
+
+                        <p class="kanban-card-description">
+                            @(board.Description ?? "Ingen beskrivning.")
+                        </p>
+
+                        <small class="text-secondary">
+                            Skapad: @board.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd")
+                        </small>
+
+                    </a>
+                </div>
+            }
+
+        </div>
+    }
+
+</div>
