@@ -1,6 +1,7 @@
 ﻿
 using KanbanBoard.Data;
 using KanbanBoard.Models;
+using KanbanBoard.Strategies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -66,12 +67,13 @@ public class BoardsController : Controller
         // Efter sparning skickas användaren tillbaka till tavellistan.
         return RedirectToAction(nameof(Index));
     }
-    
-    
+
     // GET: /Boards/Details/1
-    // Hämtar en specifik tavla tillsammans med dess uppgifter.
+    // Hämtar en specifik tavla och sorterar dess uppgifter.
     [HttpGet]
-    public async Task<IActionResult> Details(int id)
+    public async Task<IActionResult> Details(
+        int id,
+        string sort = "priority")
     {
         // Hämtar tavlan utan ändringsspårning eftersom vi bara läser data.
         var board = await _context.Boards
@@ -88,13 +90,35 @@ public class BoardsController : Controller
         var tasks = await _context.KanbanTasks
             .AsNoTracking()
             .Where(t => t.BoardId == id)
-            .OrderBy(t => t.CreatedAt)
             .ToListAsync();
 
-        // Skickar uppgifterna till vyn och tavlans information via ViewBag.
-        ViewBag.Tasks = tasks;
+        // Väljer sorteringsstrategi utifrån användarens val.
+        // Om inget giltigt val anges används prioritet som standard.
+        ITaskSortStrategy strategy = sort.ToLowerInvariant() switch
+        {
+            "deadline" => new DeadlineSortStrategy(),
+            "title" => new TitleSortStrategy(),
+            _ => new PrioritySortStrategy()
+        };
+
+        // TaskSortService använder den valda strategin.
+        // Controllern behöver inte känna till hur sorteringen utförs.
+        var sortService = new TaskSortService(strategy);
+
+        var sortedTasks = sortService.SortTasks(tasks).ToList();
+
+        // Sparar den aktiva sorteringen så att vyn kan visa rätt val.
+        ViewBag.SelectedSort = sort.ToLowerInvariant() switch
+        {
+            "deadline" => "deadline",
+            "title" => "title",
+            _ => "priority"
+        };
+
+        // Skickar de sorterade uppgifterna till vyn.
+        // Tavlans information skickas som modell.
+        ViewBag.Tasks = sortedTasks;
 
         return View(board);
     }
-
 }

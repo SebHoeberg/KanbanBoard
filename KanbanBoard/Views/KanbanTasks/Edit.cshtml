@@ -1,0 +1,122 @@
+﻿
+@using KanbanBoard.Models
+@model KanbanTask
+
+@{
+    ViewData["Title"] = "Redigera uppgift";
+}
+
+<div class="kanban-container">
+
+    <div class="mb-4">
+        <a asp-controller="Boards"
+           asp-action="Details"
+           asp-route-id="@Model.BoardId"
+           class="text-decoration-none text-secondary">
+            ← Tillbaka till tavlan
+        </a>
+    </div>
+
+    <h1 class="page-title">Redigera uppgift</h1>
+
+    <p class="page-description mb-4">
+        Uppdatera informationen för din uppgift.
+    </p>
+
+    <div class="kanban-card">
+
+        @* Formuläret skickar ändringarna till Edit-metoden i controllern. *@
+        <form asp-controller="KanbanTasks"
+              asp-action="Edit"
+              asp-route-id="@Model.Id"
+              method="post">
+
+            @* Uppgiftens ID behövs för att hitta rätt post i databasen. *@
+            <input type="hidden" asp-for="Id" />
+
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label">
+                    Titel
+                </label>
+
+                <input asp-for="Title"
+                       class="form-control kanban-input"
+                       maxlength="150" />
+
+                <span asp-validation-for="Title"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label">
+                    Beskrivning
+                </label>
+
+                <textarea asp-for="Description"
+                          class="form-control kanban-input"
+                          rows="4"
+                          maxlength="1000"></textarea>
+
+                <span asp-validation-for="Description"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Priority" class="form-label">
+                    Prioritet
+                </label>
+
+                <select asp-for="Priority"
+                        class="form-select kanban-input">
+
+                    <option value="0">Låg</option>
+                    <option value="1">Normal</option>
+                    <option value="2">Hög</option>
+
+                </select>
+
+                <span asp-validation-for="Priority"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="DueDate" class="form-label">
+                    Deadline
+                </label>
+
+                <input asp-for="DueDate"
+                       type="date"
+                       class="form-control kanban-input" />
+
+                <span asp-validation-for="DueDate"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="d-flex gap-2">
+
+                <button type="submit"
+                        class="btn btn-kanban-primary">
+                    Spara ändringar
+                </button>
+
+                <a asp-controller="Boards"
+                   asp-action="Details"
+                   asp-route-id="@Model.BoardId"
+                   class="btn btn-kanban-secondary">
+                    Avbryt
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

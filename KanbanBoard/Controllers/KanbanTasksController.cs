@@ -61,8 +61,7 @@ public class KanbanTasksController : Controller
         }
 
         // Board är en navigationsegenskap som EF Core fyller i.
-        // Vi tar bort ett eventuellt valideringsfel eftersom
-        // formuläret bara skickar BoardId, inte ett Board-objekt.
+        // Formuläret skickar bara BoardId, inte ett Board-objekt.
         ModelState.Remove(nameof(KanbanTask.Board));
 
         // Kontrollera att prioriteten har ett tillåtet värde.
@@ -93,20 +92,40 @@ public class KanbanTasksController : Controller
             "Boards",
             new { id = task.BoardId });
     }
-    
-    // POST: /KanbanTasks/Move
-    // Flyttar en uppgift till en annan Kanban-kolumn.
+
+    // GET: /KanbanTasks/Edit/1
+    // Hämtar en befintlig uppgift och visar redigeringsformuläret.
+    [HttpGet]
+    public async Task<IActionResult> Edit(int id)
+    {
+        // AsNoTracking används eftersom uppgiften bara ska visas här.
+        var task = await _context.KanbanTasks
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == id);
+
+        if (task == null)
+        {
+            return NotFound();
+        }
+
+        return View(task);
+    }
+
+    // POST: /KanbanTasks/Edit/1
+    // Sparar ändringar i en befintlig uppgift.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Move(int id, KanbanBoard.Models.TaskStatus status)
+    public async Task<IActionResult> Edit(
+        int id,
+        [Bind("Id,Title,Description,Priority,DueDate")] KanbanTask updatedTask)
     {
-        // Kontrollera att statusvärdet motsvarar en giltig kolumn.
-        if (!Enum.IsDefined(status))
+        // Kontrollera att ID i adressen och formuläret stämmer överens.
+        if (id != updatedTask.Id)
         {
             return BadRequest();
         }
 
-        // Hämtar uppgiften från databasen så att EF Core kan spåra ändringen.
+        // Hämta originaluppgiften så att EF Core kan spåra ändringarna.
         var task = await _context.KanbanTasks
             .FirstOrDefaultAsync(t => t.Id == id);
 
@@ -115,15 +134,104 @@ public class KanbanTasksController : Controller
             return NotFound();
         }
 
-        // Uppdaterar status och sparar ändringen i SQLite.
-        task.Status = status;
+        // Board är en navigationsegenskap som inte skickas från formuläret.
+        ModelState.Remove(nameof(KanbanTask.Board));
+
+        // BoardId, Status och CreatedAt ändras inte vid redigering.
+        ModelState.Remove(nameof(KanbanTask.BoardId));
+        ModelState.Remove(nameof(KanbanTask.Status));
+        ModelState.Remove(nameof(KanbanTask.CreatedAt));
+
+        if (!Enum.IsDefined(updatedTask.Priority))
+        {
+            ModelState.AddModelError(
+                nameof(KanbanTask.Priority),
+                "Välj en giltig prioritet.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            // Behåll tavlans ID så att avbryt-knappen kan gå tillbaka.
+            updatedTask.BoardId = task.BoardId;
+            return View(updatedTask);
+        }
+
+        // Uppdatera bara de fält som användaren får redigera.
+        // På så sätt kan inte formuläret ändra tavla, status eller skapandedatum.
+        task.Title = updatedTask.Title;
+        task.Description = updatedTask.Description;
+        task.Priority = updatedTask.Priority;
+        task.DueDate = updatedTask.DueDate;
+
         await _context.SaveChangesAsync();
 
-        // Återvänd till tavlan som uppgiften tillhör.
         return RedirectToAction(
             "Details",
             "Boards",
             new { id = task.BoardId });
     }
 
+    // POST: /KanbanTasks/Move
+    // Flyttar en uppgift till en annan Kanban-kolumn.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Move(
+        int id,
+        KanbanBoard.Models.TaskStatus status)
+    {
+        // Kontrollera att statusvärdet motsvarar en giltig kolumn.
+        if (!Enum.IsDefined(status))
+        {
+            return BadRequest();
+        }
+
+        // Hämta uppgiften så att EF Core kan spåra ändringen.
+        var task = await _context.KanbanTasks
+            .FirstOrDefaultAsync(t => t.Id == id);
+
+        if (task == null)
+        {
+            return NotFound();
+        }
+
+        // Uppdatera status och spara ändringen i SQLite.
+        task.Status = status;
+        await _context.SaveChangesAsync();
+
+        return RedirectToAction(
+            "Details",
+            "Boards",
+            new { id = task.BoardId });
+    }
+
+    // POST: /KanbanTasks/Delete
+    // Tar bort en befintlig uppgift från databasen.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        // Hämta uppgiften som ska tas bort.
+        var task = await _context.KanbanTasks
+            .FirstOrDefaultAsync(t => t.Id == id);
+
+        if (task == null)
+        {
+            return NotFound();
+        }
+
+        // Spara tavlans ID innan uppgiften raderas.
+        // Det behövs för att återvända till rätt tavla.
+        var boardId = task.BoardId;
+
+        // EF Core markerar uppgiften för borttagning.
+        _context.KanbanTasks.Remove(task);
+
+        // Ändringen genomförs i SQLite.
+        await _context.SaveChangesAsync();
+
+        return RedirectToAction(
+            "Details",
+            "Boards",
+            new { id = boardId });
+    }
 }
