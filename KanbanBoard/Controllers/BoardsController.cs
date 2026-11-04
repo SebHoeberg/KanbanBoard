@@ -9,25 +9,22 @@ namespace KanbanBoard.Controllers;
 
 /// <summary>
 /// Hanterar användarens Kanban-tavlor.
-/// Här finns funktioner för att visa och skapa tavlor.
+/// Här finns funktioner för att visa, skapa, redigera och ta bort tavlor.
 /// </summary>
 public class BoardsController : Controller
 {
     private readonly AppDbContext _context;
 
     // DbContext skickas in automatiskt genom dependency injection.
-    // Det gör att controllern inte behöver skapa en egen databasanslutning.
     public BoardsController(AppDbContext context)
     {
         _context = context;
     }
 
     // GET: /Boards
-    // Hämtar alla tavlor från databasen och skickar dem till vyn.
+    // Hämtar alla tavlor från databasen.
     public async Task<IActionResult> Index()
     {
-        // AsNoTracking används eftersom vi bara ska läsa informationen.
-        // Det minskar onödig minnesanvändning från EF Cores ändringsspårning.
         var boards = await _context.Boards
             .AsNoTracking()
             .OrderByDescending(board => board.CreatedAt)
@@ -37,7 +34,6 @@ public class BoardsController : Controller
     }
 
     // GET: /Boards/Create
-    // Visar formuläret för att skapa en ny Kanban-tavla.
     [HttpGet]
     public IActionResult Create()
     {
@@ -45,55 +41,47 @@ public class BoardsController : Controller
     }
 
     // POST: /Boards/Create
-    // Tar emot formuläret och sparar tavlan i SQLite.
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
         [Bind("Name,Description")] Board board)
     {
-        // Kontrollerar valideringsreglerna i Board-modellen.
         if (!ModelState.IsValid)
         {
             return View(board);
         }
 
-        // Datum sätts på servern i stället för att hämtas från formuläret.
+        // Skapelsedatum sätts på servern.
         board.CreatedAt = DateTime.UtcNow;
 
-        // EF Core registrerar tavlan och sparar den i databasen.
         _context.Boards.Add(board);
         await _context.SaveChangesAsync();
 
-        // Efter sparning skickas användaren tillbaka till tavellistan.
         return RedirectToAction(nameof(Index));
     }
 
     // GET: /Boards/Details/1
-    // Hämtar en specifik tavla och sorterar dess uppgifter.
+    // Visar tavlan och sorterar dess uppgifter med Strategy pattern.
     [HttpGet]
     public async Task<IActionResult> Details(
         int id,
         string sort = "priority")
     {
-        // Hämtar tavlan utan ändringsspårning eftersom vi bara läser data.
         var board = await _context.Boards
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == id);
 
-        // Om tavlan inte finns returneras HTTP 404.
         if (board == null)
         {
             return NotFound();
         }
 
-        // Hämtar endast uppgifterna som tillhör den valda tavlan.
         var tasks = await _context.KanbanTasks
             .AsNoTracking()
             .Where(t => t.BoardId == id)
             .ToListAsync();
 
         // Väljer sorteringsstrategi utifrån användarens val.
-        // Om inget giltigt val anges används prioritet som standard.
         ITaskSortStrategy strategy = sort.ToLowerInvariant() switch
         {
             "deadline" => new DeadlineSortStrategy(),
@@ -101,13 +89,9 @@ public class BoardsController : Controller
             _ => new PrioritySortStrategy()
         };
 
-        // TaskSortService använder den valda strategin.
-        // Controllern behöver inte känna till hur sorteringen utförs.
         var sortService = new TaskSortService(strategy);
-
         var sortedTasks = sortService.SortTasks(tasks).ToList();
 
-        // Sparar den aktiva sorteringen så att vyn kan visa rätt val.
         ViewBag.SelectedSort = sort.ToLowerInvariant() switch
         {
             "deadline" => "deadline",
@@ -115,10 +99,91 @@ public class BoardsController : Controller
             _ => "priority"
         };
 
-        // Skickar de sorterade uppgifterna till vyn.
-        // Tavlans information skickas som modell.
         ViewBag.Tasks = sortedTasks;
 
         return View(board);
+    }
+
+    // GET: /Boards/Edit/1
+    // Hämtar tavlan och visar redigeringsformuläret.
+    [HttpGet]
+    public async Task<IActionResult> Edit(int id)
+    {
+        var board = await _context.Boards
+            .AsNoTracking()
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        if (board == null)
+        {
+            return NotFound();
+        }
+
+        return View(board);
+    }
+
+    // POST: /Boards/Edit/1
+    // Uppdaterar endast namn och beskrivning.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(
+        int id,
+        [Bind("Id,Name,Description")] Board editedBoard)
+    {
+        if (id != editedBoard.Id)
+        {
+            return BadRequest();
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(editedBoard);
+        }
+
+        var board = await _context.Boards
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        if (board == null)
+        {
+            return NotFound();
+        }
+
+        // Skapelsedatum och uppgifter påverkas inte.
+        board.Name = editedBoard.Name;
+        board.Description = editedBoard.Description;
+
+        await _context.SaveChangesAsync();
+
+        return RedirectToAction(nameof(Details), new { id = board.Id });
+    }
+
+    // POST: /Boards/Delete
+    // Tar bort tavlan och alla uppgifter som tillhör den.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var board = await _context.Boards
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        if (board == null)
+        {
+            return NotFound();
+        }
+
+        // Hämtar endast uppgifterna som tillhör tavlan.
+        var tasks = await _context.KanbanTasks
+            .Where(task => task.BoardId == id)
+            .ToListAsync();
+
+        // Tar först bort uppgifterna så att inga kopplade poster blir kvar.
+        _context.KanbanTasks.RemoveRange(tasks);
+
+        // Därefter tas själva tavlan bort.
+        _context.Boards.Remove(board);
+
+        // EF Core sparar båda borttagningarna i samma SaveChanges-anrop.
+        await _context.SaveChangesAsync();
+
+        return RedirectToAction(nameof(Index));
     }
 }

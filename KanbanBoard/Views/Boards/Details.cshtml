@@ -3,23 +3,20 @@
 @model Board
 
 @{
-    ViewData["Title"] = Model.Name;
+ViewData["Title"] = Model.Name;
 
-    // Uppgifterna har hämtats från SQLite och sorterats
-    // med den valda strategin i BoardsController.
-    var tasks = ViewBag.Tasks as List<KanbanTask> ?? new List<KanbanTask>();
+// Uppgifterna sorteras i BoardsController med vald Strategy.
+var tasks = ViewBag.Tasks as List<KanbanTask> ?? new List<KanbanTask>();
+var selectedSort = ViewBag.SelectedSort as string ?? "priority";
 
-    // Hämtar användarens aktuella sorteringsval.
-    var selectedSort = ViewBag.SelectedSort as string ?? "priority";
-
-    // De fyra fasta kolumnerna på vår Kanban-tavla.
-    var columns = new[]
-    {
-        new { Status = KanbanBoard.Models.TaskStatus.Backlog, Name = "Backlogg" },
-        new { Status = KanbanBoard.Models.TaskStatus.Todo, Name = "Att göra" },
-        new { Status = KanbanBoard.Models.TaskStatus.InProgress, Name = "Pågår" },
-        new { Status = KanbanBoard.Models.TaskStatus.Done, Name = "Klart" }
-    };
+// Tavlans fyra fasta kolumner.
+var columns = new[]
+{
+new { Status = KanbanBoard.Models.TaskStatus.Backlog, Name = "Backlogg" },
+new { Status = KanbanBoard.Models.TaskStatus.Todo, Name = "Att göra" },
+new { Status = KanbanBoard.Models.TaskStatus.InProgress, Name = "Pågår" },
+new { Status = KanbanBoard.Models.TaskStatus.Done, Name = "Klart" }
+};
 }
 
 <div class="kanban-container">
@@ -38,21 +35,41 @@
 
             @if (!string.IsNullOrWhiteSpace(Model.Description))
             {
-                <p class="page-description">@Model.Description</p>
+            <p class="page-description">@Model.Description</p>
             }
         </div>
 
-        <a asp-controller="KanbanTasks"
-           asp-action="Create"
-           asp-route-boardId="@Model.Id"
-           class="btn btn-kanban-primary">
-            + Ny uppgift
-        </a>
+        <div class="d-flex gap-2">
+            @* Ny knapp för att redigera tavlans namn och beskrivning. *@
+            <a asp-controller="Boards"
+               asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn btn-kanban-secondary">
+                Redigera tavla
+            </a>
+
+            @* POST används för att radera tavlan och dess uppgifter.
+               Bekräftelsen visas innan formuläret skickas. *@
+            <form asp-controller="Boards"
+                  asp-action="Delete"
+                  method="post"
+                  onsubmit="return confirm('Vill du verkligen ta bort tavlan och ALLA dess uppgifter? Detta går inte att ångra.');">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button type="submit" class="btn btn-kanban-secondary text-danger">
+                    Ta bort tavla
+                </button>
+            </form>
+
+            <a asp-controller="KanbanTasks"
+               asp-action="Create"
+               asp-route-boardId="@Model.Id"
+               class="btn btn-kanban-primary">
+                + Ny uppgift
+            </a>
+        </div>
     </div>
 
-    @* Användaren väljer vilken Strategy-implementation som ska användas.
-       Formuläret skickas med GET så att sorteringen kan ändras utan
-       att någon information i databasen påverkas. *@
+    @* Sortering med Strategy pattern. *@
     <div class="d-flex justify-content-end align-items-center gap-3 mb-4">
         <label for="sort" class="text-secondary mb-0">
             Sortera efter:
@@ -87,153 +104,256 @@
         </form>
     </div>
 
-    @* Tavlans fyra kolumner visas bredvid varandra på stora skärmar. *@
+    @* Tavlans fyra kolumner. *@
     <div class="row g-3">
 
         @foreach (var column in columns)
         {
-            // Filtrerar fram uppgifterna som tillhör den aktuella kolumnen.
-            // Where behåller den ordning som Strategy redan har bestämt.
-            var columnTasks = tasks
-                .Where(task => task.Status == column.Status)
-                .ToList();
+        var columnTasks = tasks
+        .Where(task => task.Status == column.Status)
+        .ToList();
 
-            <div class="col-12 col-md-6 col-xl-3">
-                <div class="kanban-card h-100">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="kanban-card h-100 kanban-dropzone"
+                 data-status="@((int)column.Status)">
 
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="kanban-card-title mb-0">
-                            @column.Name
-                        </h3>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="kanban-card-title mb-0">
+                        @column.Name
+                    </h3>
 
-                        <span class="badge bg-secondary">
+                    <span class="badge bg-secondary">
                             @columnTasks.Count
                         </span>
+                </div>
+
+                @if (!columnTasks.Any())
+                {
+                <p class="kanban-card-description">
+                    Inga uppgifter ännu.
+                </p>
+                }
+                else
+                {
+                @foreach (var task in columnTasks)
+                {
+                <div class="kanban-card mb-3 kanban-draggable"
+                     draggable="true"
+                     data-task-id="@task.Id"
+                     data-current-status="@((int)task.Status)"
+                     style="cursor: grab;">
+
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <h5 class="kanban-card-title">
+                            @task.Title
+                        </h5>
+
+                        <a asp-controller="KanbanTasks"
+                           asp-action="Edit"
+                           asp-route-id="@task.Id"
+                           class="btn btn-kanban-secondary btn-sm">
+                            Redigera
+                        </a>
                     </div>
 
-                    @if (!columnTasks.Any())
+                    @if (!string.IsNullOrWhiteSpace(task.Description))
                     {
-                        <p class="kanban-card-description">
-                            Inga uppgifter ännu.
-                        </p>
+                    <p class="kanban-card-description">
+                        @task.Description
+                    </p>
                     }
-                    else
-                    {
-                        @* Varje uppgift visas i kolumnen som motsvarar dess status. *@
-                        @foreach (var task in columnTasks)
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-secondary">
+                            Prioritet: @task.Priority
+                        </small>
+
+                        @if (task.DueDate.HasValue)
                         {
-                            <div class="kanban-card mb-3">
-
-                                <div class="d-flex justify-content-between align-items-start gap-2">
-                                    <h5 class="kanban-card-title">
-                                        @task.Title
-                                    </h5>
-
-                                    <a asp-controller="KanbanTasks"
-                                       asp-action="Edit"
-                                       asp-route-id="@task.Id"
-                                       class="btn btn-kanban-secondary btn-sm">
-                                        Redigera
-                                    </a>
-                                </div>
-
-                                @if (!string.IsNullOrWhiteSpace(task.Description))
-                                {
-                                    <p class="kanban-card-description">
-                                        @task.Description
-                                    </p>
-                                }
-
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-secondary">
-                                        Prioritet: @task.Priority
-                                    </small>
-
-                                    @if (task.DueDate.HasValue)
-                                    {
-                                        <small class="text-secondary">
-                                            @task.DueDate.Value.ToString("yyyy-MM-dd")
-                                        </small>
-                                    }
-                                </div>
-
-                                @* Flyttknapparna skickar uppgiftens ID och nya status
-                                   till Move-metoden i KanbanTasksController. *@
-                                <div class="d-flex justify-content-between gap-2 mt-3">
-
-                                    @if (task.Status != KanbanBoard.Models.TaskStatus.Backlog)
-                                    {
-                                        <form asp-controller="KanbanTasks"
-                                              asp-action="Move"
-                                              method="post">
-
-                                            <input type="hidden"
-                                                   name="id"
-                                                   value="@task.Id" />
-
-                                            <input type="hidden"
-                                                   name="status"
-                                                   value="@((int)task.Status - 1)" />
-
-                                            <button type="submit"
-                                                    class="btn btn-kanban-secondary btn-sm">
-                                                ← Flytta
-                                            </button>
-                                        </form>
-                                    }
-                                    else
-                                    {
-                                        <span></span>
-                                    }
-
-                                    @if (task.Status != KanbanBoard.Models.TaskStatus.Done)
-                                    {
-                                        <form asp-controller="KanbanTasks"
-                                              asp-action="Move"
-                                              method="post">
-
-                                            <input type="hidden"
-                                                   name="id"
-                                                   value="@task.Id" />
-
-                                            <input type="hidden"
-                                                   name="status"
-                                                   value="@((int)task.Status + 1)" />
-
-                                            <button type="submit"
-                                                    class="btn btn-kanban-secondary btn-sm">
-                                                Flytta →
-                                            </button>
-                                        </form>
-                                    }
-
-                                </div>
-
-                                @* Borttagning kräver POST och användarens bekräftelse.
-                                   Om användaren väljer Avbryt skickas inget formulär. *@
-                                <form asp-controller="KanbanTasks"
-                                      asp-action="Delete"
-                                      method="post"
-                                      class="mt-3"
-                                      onsubmit="return confirm('Vill du verkligen ta bort den här uppgiften?');">
-
-                                    <input type="hidden"
-                                           name="id"
-                                           value="@task.Id" />
-
-                                    <button type="submit"
-                                            class="btn btn-outline-danger btn-sm">
-                                        Ta bort
-                                    </button>
-                                </form>
-
-                            </div>
+                        <small class="text-secondary">
+                            @task.DueDate.Value.ToString("yyyy-MM-dd")
+                        </small>
                         }
-                    }
+                    </div>
+
+                    @* Vanliga flyttknappar behålls. *@
+                    <div class="d-flex justify-content-between gap-2 mt-3">
+
+                        @if (task.Status != KanbanBoard.Models.TaskStatus.Backlog)
+                        {
+                        <form asp-controller="KanbanTasks"
+                              asp-action="Move"
+                              method="post">
+
+                            <input type="hidden"
+                                   name="id"
+                                   value="@task.Id" />
+
+                            <input type="hidden"
+                                   name="status"
+                                   value="@((int)task.Status - 1)" />
+
+                            <button type="submit"
+                                    class="btn btn-kanban-secondary btn-sm">
+                                ← Flytta
+                            </button>
+                        </form>
+                        }
+                        else
+                        {
+                        <span></span>
+                        }
+
+                        @if (task.Status != KanbanBoard.Models.TaskStatus.Done)
+                        {
+                        <form asp-controller="KanbanTasks"
+                              asp-action="Move"
+                              method="post">
+
+                            <input type="hidden"
+                                   name="id"
+                                   value="@task.Id" />
+
+                            <input type="hidden"
+                                   name="status"
+                                   value="@((int)task.Status + 1)" />
+
+                            <button type="submit"
+                                    class="btn btn-kanban-secondary btn-sm">
+                                Flytta →
+                            </button>
+                        </form>
+                        }
+
+                    </div>
+
+                    @* Borttagning av uppgift. *@
+                    <form asp-controller="KanbanTasks"
+                          asp-action="Delete"
+                          method="post"
+                          class="mt-3"
+                          onsubmit="return confirm('Vill du verkligen ta bort den här uppgiften?');">
+
+                        <input type="hidden"
+                               name="id"
+                               value="@task.Id" />
+
+                        <button type="submit"
+                                class="btn btn-outline-danger btn-sm">
+                            Ta bort
+                        </button>
+                    </form>
 
                 </div>
+                }
+                }
+
             </div>
+        </div>
         }
 
     </div>
 </div>
+
+@* Dolt formulär för drag-and-drop. *@
+<form id="dragDropMoveForm"
+      asp-controller="KanbanTasks"
+      asp-action="Move"
+      method="post"
+      class="d-none">
+
+    <input type="hidden"
+           name="id"
+           id="dragTaskId" />
+
+    <input type="hidden"
+           name="status"
+           id="dragTaskStatus" />
+</form>
+
+@section Scripts {
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const draggableCards = document.querySelectorAll(".kanban-draggable");
+        const dropzones = document.querySelectorAll(".kanban-dropzone");
+
+        const moveForm = document.getElementById("dragDropMoveForm");
+        const taskIdInput = document.getElementById("dragTaskId");
+        const statusInput = document.getElementById("dragTaskStatus");
+
+        let draggedCard = null;
+        let submitting = false;
+
+        draggableCards.forEach(card => {
+
+            card.addEventListener("dragstart", function (event) {
+                if (submitting) {
+                    event.preventDefault();
+                    return;
+                }
+
+                draggedCard = card;
+
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", card.dataset.taskId);
+
+                card.style.opacity = "0.5";
+            });
+
+            card.addEventListener("dragend", function () {
+                card.style.opacity = "1";
+                draggedCard = null;
+
+                dropzones.forEach(zone => {
+                    zone.style.outline = "";
+                });
+            });
+        });
+
+        dropzones.forEach(zone => {
+
+            zone.addEventListener("dragover", function (event) {
+                if (!draggedCard || submitting) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+
+                zone.style.outline = "2px dashed #6ea8fe";
+            });
+
+            zone.addEventListener("dragleave", function (event) {
+                if (!zone.contains(event.relatedTarget)) {
+                    zone.style.outline = "";
+                }
+            });
+
+            zone.addEventListener("drop", function (event) {
+                event.preventDefault();
+                zone.style.outline = "";
+
+                if (!draggedCard || submitting) {
+                    return;
+                }
+
+                const taskId = draggedCard.dataset.taskId;
+                const newStatus = zone.dataset.status;
+                const oldStatus = draggedCard.dataset.currentStatus;
+
+                if (newStatus === oldStatus) {
+                    return;
+                }
+
+                // Skickar uppgiftens ID och nya status till MVC-controllern.
+                taskIdInput.value = taskId;
+                statusInput.value = newStatus;
+
+                submitting = true;
+                moveForm.requestSubmit();
+            });
+        });
+    });
+</script>
+}
